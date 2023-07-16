@@ -18,7 +18,6 @@ class Game:  # Определение класса Game с помощью дек
     id: int
     name: str
     background_image: str
-    screenshots: list
 
 
 async def requests():  # Определение асинхронной функции requests
@@ -30,20 +29,10 @@ async def requests():  # Определение асинхронной функ�
         with tqdm(total=total_pages, desc="Обработка страниц") as pbar_pages:
             for page in range(1, total_pages + 1):
                 games = await api.games_list(
-                    page_size=1000, page=page
+                    page_size=1000, page=page, ordering="-metacritic"
                 )  # Получение списка игр с использованием API
                 for game in games.results:  # Перебор игр в полученном списке
-                    screenshots_list = []
-                    screenshots = await api.games_screenshots_list(
-                        game.id
-                    )  # Получение списка скриншотов для текущей игры
-                    for screenshot in screenshots.results:  # Перебор скриншотов
-                        screenshots_list.append(
-                            screenshot.image
-                        )  # Добавление ссылки на скриншот в список
-                    game_obj = Game(
-                        game.id, game.name, game.background_image, screenshots_list
-                    )  # Создание объекта Game
+                    game_obj = Game(game.id, game.name, game.background_image)
                     games_list.append(game_obj)  # Добавление объекта Game в список игр
                 pbar_pages.update(1)  # Увеличение значения прогресс-бара
         json_data = json.dumps(

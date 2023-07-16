@@ -18,7 +18,6 @@ class Game:
     id: int
     name: str
     background_image: str
-    screenshots: list
 
 
 def choose_games(num_games=8):
@@ -34,7 +33,6 @@ def choose_games(num_games=8):
             id=game_data["id"],
             name=game_data["name"],
             background_image=game_data["background_image"],
-            screenshots=game_data["screenshots"],
         )
         games_list.append(game_obj)
 
@@ -47,13 +45,32 @@ def choose_games(num_games=8):
     return random_games
 
 
+def load_scores():
+    if os.path.exists("scores.json"):
+        with open("scores.json", "r") as file:
+            return json.load(file)
+    else:
+        return {}
+
+
+def save_scores(scores):
+    with open("scores.json", "w") as file:
+        json.dump(scores, file)
+
+
 @bot.message_handler(commands=["me"])
 def me_handler(message):
     if message.from_user.id not in users:
         users[message.from_user.id] = {"score": 0}
+
+    scores = load_scores()  # Загрузка счетов из файла
+    if str(message.from_user.id) in scores:
+        users[message.from_user.id]["score"] = scores[str(message.from_user.id)]
+
     bot.reply_to(
         message, f'Ваш счет: <code>{users[message.from_user.id]["score"]}</code>'
     )
+
 
 
 @bot.message_handler(commands=["start"])
@@ -62,7 +79,6 @@ def start_handler(message):
         users[message.from_user.id] = {"score": 0}
     games = choose_games()
     valid_game = games[random.randint(0, len(games) - 1)]
-    random_screenshot = random.choice(valid_game.screenshots)
     markup = telebot.types.InlineKeyboardMarkup(row_width=2)
     for game in games:
         if game == valid_game:
@@ -80,7 +96,7 @@ def start_handler(message):
     bot.send_photo(
         chat_id=message.chat.id,
         caption="Угадайте игру по скриншоту",
-        photo=random_screenshot,
+        photo=valid_game.background_image,
         reply_to_message_id=message.id,
         reply_markup=markup,
     )
@@ -97,13 +113,12 @@ def callback_handler(call):
     valid = call.data[0]
     if valid == "true":
         users[call.from_user.id]["score"] += 1
-        caption = f"Правильно! Вы угадали игру: {game}"
-    else:
-        caption = f"Неправильно! Игра, которую вы не угадали: {game}"
+        scores = load_scores()
+        scores[str(call.from_user.id)] = users[call.from_user.id]["score"]
+        save_scores(scores)
 
     games = choose_games()
     valid_game = games[random.randint(0, len(games) - 1)]
-    random_screenshot = random.choice(valid_game.screenshots)
     markup = telebot.types.InlineKeyboardMarkup(row_width=2)
     for game in games:
         if game == valid_game:
@@ -119,7 +134,7 @@ def callback_handler(call):
                 )
             )
     bot.edit_message_media(
-        media=telebot.types.InputMediaPhoto(media=random_screenshot),
+        media=telebot.types.InputMediaPhoto(media=valid_game.background_image),
         chat_id=call.message.chat.id,
         message_id=call.message.id,
         reply_markup=markup,
