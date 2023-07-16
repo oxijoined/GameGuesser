@@ -25,7 +25,7 @@ async def requests():  # Определение асинхронной функ�
         rawg.Configuration(api_key={"key": RAWG_KEY})
     ) as api_client:
         api = rawg.GamesApi(api_client)
-        total_pages = 300
+        total_pages = 100
         with tqdm(total=total_pages, desc="Обработка страниц") as pbar_pages:
             for page in range(1, total_pages + 1):
                 games = await api.games_list(
