@@ -48,9 +48,13 @@ def choose_games(num_games=8):
 def load_scores():
     if os.path.exists("scores.json"):
         with open("scores.json", "r") as file:
-            return json.load(file)
+            try:
+                return json.load(file)
+            except json.JSONDecodeError:
+                return {}  # Return an empty dictionary if the file is empty or invalid
     else:
         return {}
+
 
 
 def save_scores(scores):
@@ -62,16 +66,24 @@ def save_scores(scores):
 def me_handler(message):
     if message.from_user.id not in users:
         users[message.from_user.id] = {"score": 0}
-    try:
-        scores = load_scores()  # Загрузка счетов из файла
-        if str(message.from_user.id) in scores:
-            users[message.from_user.id]["score"] = scores[str(message.from_user.id)]
 
-        bot.reply_to(
-            message, f'Ваш счет: <code>{users[message.from_user.id]["score"]}</code>'
-        )
-    except:
-        bot.reply_to(message,"Ваш счет: <code>0</code>")
+    scores = load_scores()  # Загрузка счетов из файла
+
+    if str(message.from_user.id) in scores:
+        users[message.from_user.id]["score"] = scores[str(message.from_user.id)]
+    else:
+        scores[str(message.from_user.id)] = users[message.from_user.id]["score"]
+
+    # Обновление счета в пользовательском словаре
+    users[message.from_user.id]["score"] = scores[str(message.from_user.id)]
+
+    save_scores(scores)  # Сохранение обновленного scores.json
+
+    bot.reply_to(
+        message, f'Ваш счет: <code>{users[message.from_user.id]["score"]}</code>'
+    )
+
+
 
 
 
