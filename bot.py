@@ -10,7 +10,7 @@ load_dotenv()
 BOT_TOKEN = os.getenv("TELEGRAM")
 bot = telebot.TeleBot(BOT_TOKEN, parse_mode="HTML")
 
-users = {}
+scores = []
 
 
 @dataclass
@@ -51,26 +51,36 @@ def load_scores():
             try:
                 return json.load(file)
             except json.JSONDecodeError:
-                return {}  # Return an empty dictionary if the file is empty or invalid
+                return []  # Return an empty list if the file is empty or invalid
     else:
-        return {}
-
+        return []
 
 
 def save_scores(scores):
     with open("scores.json", "w") as file:
         json.dump(scores, file)
 
+
+def update_user(message):
+    user_id = str(message.from_user.id)
+    if not any(user["id"] == user_id for user in scores):
+        scores.append({"id": user_id, "score": 0})
+
+
+scores = load_scores()  # Load scores from file
+
+
 @bot.message_handler(commands=["top"])
 def top_handler(message):
-    scores = load_scores()  # Load scores from file
-    sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)  # Sort scores in descending order
+    sorted_scores = sorted(scores, key=lambda x: x["score"], reverse=True)  # Sort scores in descending order
 
     # Generate a formatted leaderboard string
     leaderboard = "🏆 Топ игроков:\n"
-    for i, (user_id, score) in enumerate(sorted_scores[:10], start=1):
-        user = bot.get_chat_member(message.chat.id, user_id)
-        username = user.user.username if user.user.username else user.user.first_name
+    for i, user in enumerate(sorted_scores[:10], start=1):
+        user_id = user["id"]
+        score = user["score"]
+        user_info = bot.get_chat_member(message.chat.id, user_id)
+        username = user_info.user.username if user_info.user.username else user_info.user.first_name
         leaderboard += f"{i}. @{username}: {score}\n"
 
     bot.reply_to(message, leaderboard)
@@ -78,30 +88,26 @@ def top_handler(message):
 
 @bot.message_handler(commands=["me"])
 def me_handler(message):
-    if message.from_user.id not in users:
-        users[message.from_user.id] = {"score": 0}
+    update_user(message)  # Update user information
 
-    scores = load_scores()  # Load scores from file
+    user_id = str(message.from_user.id)
 
-    if str(message.from_user.id) in scores:
-        users[message.from_user.id]["score"] = scores[str(message.from_user.id)]
-    else:
-        scores[str(message.from_user.id)] = users[message.from_user.id]["score"]
-
-    # Update the score in the user's dictionary
-    users[message.from_user.id]["score"] = scores[str(message.from_user.id)]
-
-    save_scores(scores)  # Save the updated scores to scores.json
+    # Retrieve the current user's score
+    user = next((user for user in scores if user["id"] == user_id), None)
+    score = user["score"] if user else 0
 
     bot.reply_to(
-        message, f'Ваш счет: <code>{users[message.from_user.id]["score"]}</code>'
+        message, f'Ваш счет: <code>{score}</code>'
     )
 
 
 @bot.message_handler(commands=["start"])
 def start_handler(message):
-    if message.from_user.id not in users:
-        users[message.from_user.id] = {"score": 0}
+    update_user(message)  # Update user information
+
+    user_id = str(message.from_user.id)
+    if not any(user["id"] == user_id for user in scores):
+        scores.append({"id": user_id, "score": 0})
     games = choose_games()
     valid_game = games[random.randint(0, len(games) - 1)]
     markup = telebot.types.InlineKeyboardMarkup(row_width=2)
@@ -129,17 +135,24 @@ def start_handler(message):
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_handler(call):
-    if call.from_user.id not in users:
-        users[call.from_user.id] = {"score": 0}
+    update_user(call.message)  # Update user information
+
+    user_id = str(call.from_user.id)
+    user = next((user for user in scores if user["id"] == user_id), None)
 
     call.data = call.data.split("|")
     game = call.data[1]
     game_ = game
     valid = call.data[0]
     if valid == "true":
-        users[call.from_user.id]["score"] += 1
-        scores = load_scores()
-        scores[str(call.from_user.id)] = users[call.from_user.id]["score"]
+        if user:
+            # Update the user's score
+            user["score"] += 1
+        else:
+            # Add a new user with a score of 1
+            scores.append({"id": user_id, "score": 1})
+
+        # Save the updated scores list
         save_scores(scores)
 
     games = choose_games()
@@ -166,7 +179,7 @@ def callback_handler(call):
     )
     bot.answer_callback_query(
         call.id,
-        f"✅ Вы угадали, это {game_}"
+        f"✅ Вы угадали, это {game_}, ваш счет {user['score']}"
         if valid == "true"
         else f"❌ Вы не угадали, это {game_}",
     )
