@@ -62,14 +62,16 @@ def save_scores(scores):
 def me_handler(message):
     if message.from_user.id not in users:
         users[message.from_user.id] = {"score": 0}
+    try:
+        scores = load_scores()  # Загрузка счетов из файла
+        if str(message.from_user.id) in scores:
+            users[message.from_user.id]["score"] = scores[str(message.from_user.id)]
 
-    scores = load_scores()  # Загрузка счетов из файла
-    if str(message.from_user.id) in scores:
-        users[message.from_user.id]["score"] = scores[str(message.from_user.id)]
-
-    bot.reply_to(
-        message, f'Ваш счет: <code>{users[message.from_user.id]["score"]}</code>'
-    )
+        bot.reply_to(
+            message, f'Ваш счет: <code>{users[message.from_user.id]["score"]}</code>'
+        )
+    except:
+        bot.reply_to(message,"Ваш счет: <code>0</code>")
 
 
 
