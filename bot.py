@@ -115,13 +115,13 @@ def start_handler(message):
         if game == valid_game:
             markup.add(
                 telebot.types.InlineKeyboardButton(
-                    game.name, callback_data=f"true|{valid_game.name[:58]}"
+                    game.name, callback_data=f"true|{valid_game.name[:50]}"
                 )
             )
         else:
             markup.add(
                 telebot.types.InlineKeyboardButton(
-                    game.name, callback_data=f"false|{valid_game.name[:58]}"
+                    game.name, callback_data=f"false|{valid_game.name[:50]}"
                 )
             )
     bot.send_photo(
@@ -162,13 +162,13 @@ def callback_handler(call):
         if game == valid_game:
             markup.add(
                 telebot.types.InlineKeyboardButton(
-                    game.name, callback_data=f"true|{valid_game.name[:58]}"
+                    game.name, callback_data=f"true|{valid_game.name[:50]}"
                 )
             )
         else:
             markup.add(
                 telebot.types.InlineKeyboardButton(
-                    game.name, callback_data=f"false|{valid_game.name[:58]}"
+                    game.name, callback_data=f"false|{valid_game.name[:50]}"
                 )
             )
     bot.edit_message_media(
