@@ -132,4 +132,4 @@ def callback_handler(call):
     )
 
 
-bot.polling()
+bot.infinity_polling()
