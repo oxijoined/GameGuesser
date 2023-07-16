@@ -61,30 +61,41 @@ def save_scores(scores):
     with open("scores.json", "w") as file:
         json.dump(scores, file)
 
+@bot.message_handler(commands=["top"])
+def top_handler(message):
+    scores = load_scores()  # Load scores from file
+    sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)  # Sort scores in descending order
+
+    # Generate a formatted leaderboard string
+    leaderboard = "🏆 Топ игроков:\n"
+    for i, (user_id, score) in enumerate(sorted_scores[:10], start=1):
+        user = bot.get_chat_member(message.chat.id, user_id)
+        username = user.user.username if user.user.username else user.user.first_name
+        leaderboard += f"{i}. @{username}: {score}\n"
+
+    bot.reply_to(message, leaderboard)
+
 
 @bot.message_handler(commands=["me"])
 def me_handler(message):
     if message.from_user.id not in users:
         users[message.from_user.id] = {"score": 0}
 
-    scores = load_scores()  # Загрузка счетов из файла
+    scores = load_scores()  # Load scores from file
 
     if str(message.from_user.id) in scores:
         users[message.from_user.id]["score"] = scores[str(message.from_user.id)]
     else:
         scores[str(message.from_user.id)] = users[message.from_user.id]["score"]
 
-    # Обновление счета в пользовательском словаре
+    # Update the score in the user's dictionary
     users[message.from_user.id]["score"] = scores[str(message.from_user.id)]
 
-    save_scores(scores)  # Сохранение обновленного scores.json
+    save_scores(scores)  # Save the updated scores to scores.json
 
     bot.reply_to(
         message, f'Ваш счет: <code>{users[message.from_user.id]["score"]}</code>'
     )
-
-
-
 
 
 @bot.message_handler(commands=["start"])
